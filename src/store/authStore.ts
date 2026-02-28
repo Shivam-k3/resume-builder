@@ -6,6 +6,7 @@ import {
   signInWithPopup,
   signOut,
   onAuthStateChanged,
+  sendEmailVerification,
 } from 'firebase/auth';
 import { auth, googleProvider } from '../lib/firebase';
 import type { User } from '../types/resume';
@@ -15,6 +16,7 @@ interface AuthState {
   isAuthenticated: boolean;
   isLoading: boolean;
   error: string | null;
+  successMessage: string | null;
   
   // Actions
   login: (email: string, password: string) => Promise<void>;
@@ -24,6 +26,7 @@ interface AuthState {
   logout: () => Promise<void>;
   setUser: (user: User) => void;
   clearError: () => void;
+  clearSuccess: () => void;
   initializeAuth: () => void;
 }
 
@@ -34,10 +37,11 @@ export const useAuthStore = create<AuthState>()(
       isAuthenticated: false,
       isLoading: false,
       error: null,
+      successMessage: null,
 
       // Email/Password Login
       login: async (email: string, password: string) => {
-        set({ isLoading: true, error: null });
+        set({ isLoading: true, error: null, successMessage: null });
         try {
           const userCredential = await signInWithEmailAndPassword(auth, email, password);
           const firebaseUser = userCredential.user;
@@ -49,7 +53,12 @@ export const useAuthStore = create<AuthState>()(
             isGuest: false,
           };
           
-          set({ user, isAuthenticated: true, isLoading: false });
+          set({ 
+            user, 
+            isAuthenticated: true, 
+            isLoading: false,
+            successMessage: `Welcome back, ${user.displayName}!`
+          });
         } catch (error) {
           const errorMessage = error instanceof Error ? error.message : 'Login failed';
           set({ error: errorMessage, isLoading: false });
@@ -59,10 +68,13 @@ export const useAuthStore = create<AuthState>()(
 
       // Email/Password Signup
       signup: async (email: string, password: string, displayName: string) => {
-        set({ isLoading: true, error: null });
+        set({ isLoading: true, error: null, successMessage: null });
         try {
           const userCredential = await createUserWithEmailAndPassword(auth, email, password);
           const firebaseUser = userCredential.user;
+          
+          // Send email verification
+          await sendEmailVerification(firebaseUser);
           
           const user: User = {
             id: firebaseUser.uid,
@@ -71,7 +83,12 @@ export const useAuthStore = create<AuthState>()(
             isGuest: false,
           };
           
-          set({ user, isAuthenticated: true, isLoading: false });
+          set({ 
+            user, 
+            isAuthenticated: true, 
+            isLoading: false,
+            successMessage: 'Account created! Check your email to verify your account.'
+          });
         } catch (error) {
           const errorMessage = error instanceof Error ? error.message : 'Signup failed';
           set({ error: errorMessage, isLoading: false });
@@ -81,7 +98,7 @@ export const useAuthStore = create<AuthState>()(
 
       // Google OAuth Login
       loginWithGoogle: async () => {
-        set({ isLoading: true, error: null });
+        set({ isLoading: true, error: null, successMessage: null });
         try {
           const result = await signInWithPopup(auth, googleProvider);
           const firebaseUser = result.user;
@@ -93,7 +110,12 @@ export const useAuthStore = create<AuthState>()(
             isGuest: false,
           };
           
-          set({ user, isAuthenticated: true, isLoading: false });
+          set({ 
+            user, 
+            isAuthenticated: true, 
+            isLoading: false,
+            successMessage: `Welcome, ${user.displayName}!`
+          });
         } catch (error: any) {
           // User closed the popup - this is not an error, just clear loading state
           if (error?.code === 'auth/popup-closed-by-user') {
@@ -141,6 +163,11 @@ export const useAuthStore = create<AuthState>()(
       // Clear error message
       clearError: () => {
         set({ error: null });
+      },
+
+      // Clear success message
+      clearSuccess: () => {
+        set({ successMessage: null });
       },
 
       // Initialize auth state from Firebase (call on app startup)

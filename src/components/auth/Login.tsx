@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useAuthStore } from '../../store/authStore';
 import { useUIStore } from '../../store/uiStore';
-import { Mail, Lock, Chrome, Moon, Sun, Sparkles, AlertCircle, Loader } from 'lucide-react';
+import { Mail, Lock, Chrome, Moon, Sun, Sparkles, AlertCircle, Loader, CheckCircle } from 'lucide-react';
 
 const Login = () => {
   const [isSignup, setIsSignup] = useState(false);
@@ -9,12 +9,13 @@ const Login = () => {
   const [password, setPassword] = useState('');
   const [displayName, setDisplayName] = useState('');
   
-  const { login, signup, loginWithGoogle, startGuestSession, isLoading, error, clearError } = useAuthStore();
+  const { login, signup, loginWithGoogle, startGuestSession, isLoading, error, successMessage, clearError, clearSuccess } = useAuthStore();
   const { darkMode, toggleDarkMode } = useUIStore();
 
   const handleEmailLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     clearError();
+    clearSuccess();
     try {
       await login(email, password);
       setEmail('');
@@ -27,6 +28,7 @@ const Login = () => {
   const handleEmailSignup = async (e: React.FormEvent) => {
     e.preventDefault();
     clearError();
+    clearSuccess();
     try {
       await signup(email, password, displayName);
       setEmail('');
@@ -40,6 +42,7 @@ const Login = () => {
 
   const handleGoogleLogin = async () => {
     clearError();
+    clearSuccess();
     try {
       await loginWithGoogle();
     } catch (err) {
@@ -49,6 +52,7 @@ const Login = () => {
 
   const handleGuestSession = () => {
     clearError();
+    clearSuccess();
     startGuestSession();
   };
 
@@ -83,7 +87,7 @@ const Login = () => {
           {/* Tab Switcher */}
           <div className="flex gap-2 mb-6">
             <button
-              onClick={() => { setIsSignup(false); clearError(); }}
+              onClick={() => { setIsSignup(false); clearError(); clearSuccess(); }}
               className={`flex-1 py-2 px-4 rounded-lg font-semibold transition-all ${
                 !isSignup
                   ? 'bg-gradient-to-r from-blue-600 to-purple-600 text-white'
@@ -93,7 +97,7 @@ const Login = () => {
               Sign In
             </button>
             <button
-              onClick={() => { setIsSignup(true); clearError(); }}
+              onClick={() => { setIsSignup(true); clearError(); clearSuccess(); }}
               className={`flex-1 py-2 px-4 rounded-lg font-semibold transition-all ${
                 isSignup
                   ? 'bg-gradient-to-r from-blue-600 to-purple-600 text-white'
@@ -109,6 +113,14 @@ const Login = () => {
             <div className="mb-4 p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg flex items-start gap-2">
               <AlertCircle className="w-5 h-5 text-red-600 dark:text-red-400 flex-shrink-0 mt-0.5" />
               <p className="text-sm text-red-700 dark:text-red-300">{error}</p>
+            </div>
+          )}
+
+          {/* Success Message */}
+          {successMessage && (
+            <div className="mb-4 p-3 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg flex items-start gap-2">
+              <CheckCircle className="w-5 h-5 text-green-600 dark:text-green-400 flex-shrink-0 mt-0.5" />
+              <p className="text-sm text-green-700 dark:text-green-300">{successMessage}</p>
             </div>
           )}
 
