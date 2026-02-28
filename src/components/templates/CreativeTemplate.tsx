@@ -189,6 +189,14 @@ const CreativeTemplate = ({ resume }: TemplateProps) => {
 
             return null;
           })}
+
+          {/* Custom Sections */}
+          {resume.customSections.map((section) => (
+            <div key={section.id} className="mb-6">
+              <h2 className="text-xl font-bold text-purple-600 mb-3">{section.title}</h2>
+              <div className="text-gray-700 whitespace-pre-wrap text-sm">{section.content}</div>
+            </div>
+          ))}
         </div>
       </div>
     </div>

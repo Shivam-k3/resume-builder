@@ -130,6 +130,19 @@ const TechFocusTemplate = ({ resume }: TemplateProps) => {
           )}
         </div>
       </div>
+
+      {/* Custom Sections */}
+      {resume.customSections.length > 0 && (
+        <div className="col-span-3 bg-slate-800 p-6 rounded-lg">
+          <h3 className="text-xs font-bold uppercase tracking-widest text-cyan-400 mb-4">Additional Information</h3>
+          {resume.customSections.map((section) => (
+            <div key={section.id} className="mb-6">
+              <h4 className="text-sm font-bold text-white mb-2">{section.title}</h4>
+              <div className="text-xs text-slate-300 whitespace-pre-wrap">{section.content}</div>
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   );
 };

@@ -1,6 +1,7 @@
 import { useResumeStore } from '../../store/resumeStore';
 import { useUIStore } from '../../store/uiStore';
 import { Plus, Trash2, GripVertical, Sparkles, LayoutTemplate } from 'lucide-react';
+import { KeywordSuggester } from './KeywordSuggester';
 import {
   DndContext,
   closestCenter,
@@ -51,7 +52,37 @@ const SortableItem = ({ id, children }: SortableItemProps) => {
 };
 
 const ResumeEditor = () => {
-  const { currentResume, updatePersonalInfo, addExperience, deleteExperience, updateResume } = useResumeStore();
+  const {
+    currentResume,
+    updatePersonalInfo,
+    addExperience,
+    deleteExperience,
+    updateExperience,
+    updateResume,
+    addEducation,
+    updateEducation,
+    deleteEducation,
+    addProject,
+    updateProject,
+    deleteProject,
+    addSkill,
+    updateSkill,
+    deleteSkill,
+    addCertification,
+    updateCertification,
+    deleteCertification,
+    addAchievement,
+    updateAchievement,
+    deleteAchievement,
+    addLink,
+    updateLink,
+    deleteLink,
+    addCustomSection,
+    updateCustomSection,
+    deleteCustomSection,
+    updateProfileType,
+    updateTargetJobProfile,
+  } = useResumeStore();
   const { selectedTemplate, setSelectedTemplate } = useUIStore();
 
   const sensors = useSensors(
@@ -88,7 +119,11 @@ const ResumeEditor = () => {
           <div className="flex items-center justify-between gap-3">
             <div>
               <h2 className="text-xl sm:text-2xl font-black tracking-tight bg-gradient-to-r from-blue-600 to-cyan-600 dark:from-blue-400 dark:to-cyan-400 bg-clip-text text-transparent">Edit Resume</h2>
-              <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">Update content on the left and review live output on the right.</p>
+              <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">
+                {currentResume.profileType === 'student' 
+                  ? '👨‍🎓 Student Profile - Showing: Education (Priority), Projects (Priority), Skills, Certifications & Achievements' 
+                  : '💼 Professional Profile - Showing: Experience (Priority), Education, Skills, Projects & Certifications'}
+              </p>
             </div>
             <div className="hidden sm:flex items-center gap-2 rounded-xl bg-gradient-to-r from-amber-100 to-orange-100 dark:from-amber-900/40 dark:to-orange-900/40 text-amber-700 dark:text-amber-300 px-3 py-2 text-sm font-semibold">
               <Sparkles className="w-4 h-4" />
@@ -96,6 +131,54 @@ const ResumeEditor = () => {
             </div>
           </div>
         </div>
+
+        {/* Profile Type Selector */}
+        <div className="rounded-2xl border border-slate-200 dark:border-slate-800 bg-gradient-to-r from-white to-slate-50 dark:from-slate-900 dark:to-slate-800 p-4 sm:p-5 shadow-sm">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+            <div>
+              <h3 className="text-sm font-semibold text-slate-700 dark:text-slate-300 mb-2">Profile Type</h3>
+              <p className="text-xs text-slate-500 dark:text-slate-400">Select your profile to customize the resume sections</p>
+            </div>
+            <div className="flex gap-2">
+              <button
+                onClick={() => updateProfileType('student')}
+                className={`px-4 py-2 rounded-lg font-semibold text-sm transition-all ${
+                  currentResume.profileType === 'student'
+                    ? 'bg-gradient-to-r from-blue-600 to-cyan-600 text-white shadow-lg'
+                    : 'border border-slate-300 dark:border-slate-600 text-slate-700 dark:text-slate-300 hover:border-blue-400 dark:hover:border-blue-400'
+                }`}
+              >
+                👨‍🎓 Student
+              </button>
+              <button
+                onClick={() => updateProfileType('professional')}
+                className={`px-4 py-2 rounded-lg font-semibold text-sm transition-all ${
+                  currentResume.profileType === 'professional'
+                    ? 'bg-gradient-to-r from-purple-600 to-pink-600 text-white shadow-lg'
+                    : 'border border-slate-300 dark:border-slate-600 text-slate-700 dark:text-slate-300 hover:border-purple-400 dark:hover:border-purple-400'
+                }`}
+              >
+                💼 Working Professional
+              </button>
+            </div>
+          </div>
+        </div>
+
+        {/* Keyword Suggester */}
+        <KeywordSuggester
+          currentJobProfile={currentResume.targetJobProfile}
+          onJobProfileChange={updateTargetJobProfile}
+          onAddKeyword={(keyword, category) => {
+            const existingCategory = currentResume.skills.find(s => s.category === category);
+            if (existingCategory) {
+              if (!existingCategory.skills.includes(keyword)) {
+                updateSkill(existingCategory.id, { skills: [...existingCategory.skills, keyword] });
+              }
+            } else {
+              addSkill({ category, skills: [keyword] });
+            }
+          }}
+        />
 
         {/* Personal Info Section */}
         <div className="bg-gradient-to-br from-white to-indigo-50 dark:from-slate-900 dark:to-indigo-950/30 rounded-xl border border-indigo-200 dark:border-indigo-800 p-5 sm:p-6 shadow-sm">
@@ -181,7 +264,8 @@ const ResumeEditor = () => {
           </div>
         </div>
 
-        {/* Experience Section */}
+        {/* Experience Section - For Working Professionals */}
+        {currentResume.profileType === 'professional' && (
         <div className="bg-gradient-to-br from-white to-orange-50 dark:from-slate-900 dark:to-orange-950/30 rounded-xl border border-orange-200 dark:border-orange-800 p-5 sm:p-6 shadow-sm">
           <div className="flex justify-between items-center mb-4">
             <div className="flex items-center gap-2">
@@ -227,9 +311,7 @@ const ResumeEditor = () => {
                           type="text"
                           value={exp.position}
                           onChange={(e) =>
-                            useResumeStore
-                              .getState()
-                              .updateExperience(exp.id, { position: e.target.value })
+                            updateExperience(exp.id, { position: e.target.value })
                           }
                           className="flex-1 font-semibold border-none outline-none bg-transparent text-slate-800 dark:text-white"
                           placeholder="Position"
@@ -245,9 +327,7 @@ const ResumeEditor = () => {
                         type="text"
                         value={exp.company}
                         onChange={(e) =>
-                          useResumeStore
-                            .getState()
-                            .updateExperience(exp.id, { company: e.target.value })
+                          updateExperience(exp.id, { company: e.target.value })
                         }
                         className="w-full text-sm border-none outline-none bg-transparent text-slate-600 dark:text-slate-400"
                         placeholder="Company"
@@ -257,6 +337,491 @@ const ResumeEditor = () => {
                 ))}
               </SortableContext>
             </DndContext>
+          )}
+        </div>
+        )}
+
+        {/* Education Section - For Both but emphasized for Students */}
+        <div className="bg-gradient-to-br from-white to-cyan-50 dark:from-slate-900 dark:to-cyan-950/30 rounded-xl border border-cyan-200 dark:border-cyan-800 p-5 sm:p-6 shadow-sm">
+          <div className="flex justify-between items-center mb-4">
+            <div className="flex items-center gap-2">
+              <div className="h-2 w-2 rounded-full bg-gradient-to-r from-cyan-500 to-blue-500"></div>
+              {currentResume.profileType === 'student' ? (
+                <h3 className="text-lg font-semibold text-cyan-900 dark:text-cyan-200">Education ✨ (Priority)</h3>
+              ) : (
+                <h3 className="text-lg font-semibold text-cyan-900 dark:text-cyan-200">Education</h3>
+              )}
+            </div>
+            <button
+              onClick={() =>
+                addEducation({
+                  institution: '',
+                  degree: '',
+                  field: '',
+                  startDate: '',
+                  endDate: '',
+                  description: '',
+                })
+              }
+              className="flex items-center gap-2 bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-700 hover:to-blue-700 text-white px-3 py-2 rounded-lg text-sm font-semibold transition-all"
+            >
+              <Plus className="w-4 h-4" />
+              Add Education
+            </button>
+          </div>
+
+          {currentResume.education.length === 0 ? (
+            <p className="text-slate-500 dark:text-slate-400 text-sm">No education added yet</p>
+          ) : (
+            <div className="space-y-3">
+              {currentResume.education.map((edu) => (
+                <div key={edu.id} className="bg-white/50 dark:bg-slate-800/30 rounded-lg p-3 space-y-2">
+                  <div className="flex justify-between gap-3">
+                    <input
+                      type="text"
+                      value={edu.degree}
+                      onChange={(e) => updateEducation(edu.id, { degree: e.target.value })}
+                      className="flex-1 font-semibold border-none outline-none bg-transparent text-slate-800 dark:text-white"
+                      placeholder="Degree"
+                    />
+                    <button
+                      onClick={() => deleteEducation(edu.id)}
+                      className="text-red-500 hover:text-red-700 p-1"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                  </div>
+                  <input
+                    type="text"
+                    value={edu.institution}
+                    onChange={(e) => updateEducation(edu.id, { institution: e.target.value })}
+                    className="w-full text-sm border-none outline-none bg-transparent text-slate-600 dark:text-slate-400"
+                    placeholder="Institution"
+                  />
+                  <input
+                    type="text"
+                    value={edu.field}
+                    onChange={(e) => updateEducation(edu.id, { field: e.target.value })}
+                    className="w-full text-sm border-none outline-none bg-transparent text-slate-600 dark:text-slate-400"
+                    placeholder="Field of Study"
+                  />
+                  <div className="grid grid-cols-2 gap-2">
+                    <input
+                      type="month"
+                      value={edu.startDate}
+                      onChange={(e) => updateEducation(edu.id, { startDate: e.target.value })}
+                      className="text-sm border-none outline-none bg-transparent text-slate-600 dark:text-slate-400"
+                    />
+                    <input
+                      type="month"
+                      value={edu.endDate}
+                      onChange={(e) => updateEducation(edu.id, { endDate: e.target.value })}
+                      className="text-sm border-none outline-none bg-transparent text-slate-600 dark:text-slate-400"
+                    />
+                  </div>
+                  <textarea
+                    value={edu.description}
+                    onChange={(e) => updateEducation(edu.id, { description: e.target.value })}
+                    className="w-full text-sm border-none outline-none bg-transparent text-slate-600 dark:text-slate-400"
+                    placeholder="Description"
+                    rows={2}
+                  />
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+
+        {/* Projects Section - For Students */}
+        {currentResume.profileType === 'student' && (
+        <div className="bg-gradient-to-br from-white to-green-50 dark:from-slate-900 dark:to-green-950/30 rounded-xl border border-green-200 dark:border-green-800 p-5 sm:p-6 shadow-sm">
+          <div className="flex justify-between items-center mb-4">
+            <div className="flex items-center gap-2">
+              <div className="h-2 w-2 rounded-full bg-gradient-to-r from-green-500 to-emerald-500"></div>
+              <h3 className="text-lg font-semibold text-green-900 dark:text-green-200">Projects ✨ (Priority)</h3>
+            </div>
+            <button
+              onClick={() =>
+                addProject({
+                  name: '',
+                  description: '',
+                  technologies: [],
+                  link: '',
+                  startDate: '',
+                  endDate: '',
+                })
+              }
+              className="flex items-center gap-2 bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white px-3 py-2 rounded-lg text-sm font-semibold transition-all"
+            >
+              <Plus className="w-4 h-4" />
+              Add Project
+            </button>
+          </div>
+
+          {currentResume.projects.length === 0 ? (
+            <p className="text-slate-500 dark:text-slate-400 text-sm">No projects added yet</p>
+          ) : (
+            <div className="space-y-3">
+              {currentResume.projects.map((proj) => (
+                <div key={proj.id} className="bg-white/50 dark:bg-slate-800/30 rounded-lg p-3 space-y-2">
+                  <div className="flex justify-between gap-3">
+                    <input
+                      type="text"
+                      value={proj.name}
+                      onChange={(e) => updateProject(proj.id, { name: e.target.value })}
+                      className="flex-1 font-semibold border-none outline-none bg-transparent text-slate-800 dark:text-white"
+                      placeholder="Project Name"
+                    />
+                    <button
+                      onClick={() => deleteProject(proj.id)}
+                      className="text-red-500 hover:text-red-700 p-1"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                  </div>
+                  <textarea
+                    value={proj.description}
+                    onChange={(e) => updateProject(proj.id, { description: e.target.value })}
+                    className="w-full text-sm border-none outline-none bg-transparent text-slate-600 dark:text-slate-400"
+                    placeholder="Description"
+                    rows={2}
+                  />
+                  <input
+                    type="text"
+                    value={proj.technologies.join(', ')}
+                    onChange={(e) =>
+                      updateProject(proj.id, {
+                        technologies: e.target.value.split(',').map((t) => t.trim()),
+                      })
+                    }
+                    className="w-full text-sm border-none outline-none bg-transparent text-slate-600 dark:text-slate-400"
+                    placeholder="Technologies (comma separated)"
+                  />
+                  <input
+                    type="url"
+                    value={proj.link || ''}
+                    onChange={(e) => updateProject(proj.id, { link: e.target.value })}
+                    className="w-full text-sm border-none outline-none bg-transparent text-slate-600 dark:text-slate-400"
+                    placeholder="Project Link"
+                  />
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+        )}
+
+        {/* Skills Section - For Both */}
+        <div className="bg-gradient-to-br from-white to-pink-50 dark:from-slate-900 dark:to-pink-950/30 rounded-xl border border-pink-200 dark:border-pink-800 p-5 sm:p-6 shadow-sm">
+          <div className="flex justify-between items-center mb-4">
+            <div className="flex items-center gap-2">
+              <div className="h-2 w-2 rounded-full bg-gradient-to-r from-pink-500 to-rose-500"></div>
+              <h3 className="text-lg font-semibold text-pink-900 dark:text-pink-200">Skills</h3>
+            </div>
+            <button
+              onClick={() =>
+                addSkill({
+                  category: '',
+                  skills: [],
+                })
+              }
+              className="flex items-center gap-2 bg-gradient-to-r from-pink-600 to-rose-600 hover:from-pink-700 hover:to-rose-700 text-white px-3 py-2 rounded-lg text-sm font-semibold transition-all"
+            >
+              <Plus className="w-4 h-4" />
+              Add Skill Category
+            </button>
+          </div>
+
+          {currentResume.skills.length === 0 ? (
+            <p className="text-slate-500 dark:text-slate-400 text-sm">No skills added yet</p>
+          ) : (
+            <div className="space-y-3">
+              {currentResume.skills.map((skill) => (
+                <div key={skill.id} className="bg-white/50 dark:bg-slate-800/30 rounded-lg p-3 space-y-2">
+                  <div className="flex justify-between gap-3">
+                    <input
+                      type="text"
+                      value={skill.category}
+                      onChange={(e) => updateSkill(skill.id, { category: e.target.value })}
+                      className="flex-1 font-semibold border-none outline-none bg-transparent text-slate-800 dark:text-white"
+                      placeholder="Category (e.g. Languages)"
+                    />
+                    <button
+                      onClick={() => deleteSkill(skill.id)}
+                      className="text-red-500 hover:text-red-700 p-1"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                  </div>
+                  <input
+                    type="text"
+                    value={skill.skills.join(', ')}
+                    onChange={(e) =>
+                      updateSkill(skill.id, { skills: e.target.value.split(',').map((s) => s.trim()) })
+                    }
+                    className="w-full text-sm border-none outline-none bg-transparent text-slate-600 dark:text-slate-400"
+                    placeholder="Skills (comma separated)"
+                  />
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+
+        {/* Certifications Section */}
+        <div className="bg-gradient-to-br from-white to-amber-50 dark:from-slate-900 dark:to-amber-950/30 rounded-xl border border-amber-200 dark:border-amber-800 p-5 sm:p-6 shadow-sm">
+          <div className="flex justify-between items-center mb-4">
+            <div className="flex items-center gap-2">
+              <div className="h-2 w-2 rounded-full bg-gradient-to-r from-amber-500 to-orange-500"></div>
+              <h3 className="text-lg font-semibold text-amber-900 dark:text-amber-200">Certifications</h3>
+            </div>
+            <button
+              onClick={() =>
+                addCertification({
+                  name: '',
+                  issuer: '',
+                  date: '',
+                  link: '',
+                })
+              }
+              className="flex items-center gap-2 bg-gradient-to-r from-amber-600 to-orange-600 hover:from-amber-700 hover:to-orange-700 text-white px-3 py-2 rounded-lg text-sm font-semibold transition-all"
+            >
+              <Plus className="w-4 h-4" />
+              Add Certification
+            </button>
+          </div>
+
+          {currentResume.certifications.length === 0 ? (
+            <p className="text-slate-500 dark:text-slate-400 text-sm">No certifications added yet</p>
+          ) : (
+            <div className="space-y-3">
+              {currentResume.certifications.map((cert) => (
+                <div key={cert.id} className="bg-white/50 dark:bg-slate-800/30 rounded-lg p-3 space-y-2">
+                  <div className="flex justify-between gap-3">
+                    <input
+                      type="text"
+                      value={cert.name}
+                      onChange={(e) => updateCertification(cert.id, { name: e.target.value })}
+                      className="flex-1 font-semibold border-none outline-none bg-transparent text-slate-800 dark:text-white"
+                      placeholder="Certification Name"
+                    />
+                    <button
+                      onClick={() => deleteCertification(cert.id)}
+                      className="text-red-500 hover:text-red-700 p-1"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                  </div>
+                  <input
+                    type="text"
+                    value={cert.issuer}
+                    onChange={(e) => updateCertification(cert.id, { issuer: e.target.value })}
+                    className="w-full text-sm border-none outline-none bg-transparent text-slate-600 dark:text-slate-400"
+                    placeholder="Issuer"
+                  />
+                  <input
+                    type="month"
+                    value={cert.date}
+                    onChange={(e) => updateCertification(cert.id, { date: e.target.value })}
+                    className="text-sm border-none outline-none bg-transparent text-slate-600 dark:text-slate-400"
+                  />
+                  <input
+                    type="url"
+                    value={cert.link || ''}
+                    onChange={(e) => updateCertification(cert.id, { link: e.target.value })}
+                    className="w-full text-sm border-none outline-none bg-transparent text-slate-600 dark:text-slate-400"
+                    placeholder="Certification Link"
+                  />
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+
+        {/* Achievements Section */}
+        <div className="bg-gradient-to-br from-white to-purple-50 dark:from-slate-900 dark:to-purple-950/30 rounded-xl border border-purple-200 dark:border-purple-800 p-5 sm:p-6 shadow-sm">
+          <div className="flex justify-between items-center mb-4">
+            <div className="flex items-center gap-2">
+              <div className="h-2 w-2 rounded-full bg-gradient-to-r from-purple-500 to-pink-500"></div>
+              <h3 className="text-lg font-semibold text-purple-900 dark:text-purple-200">Achievements</h3>
+            </div>
+            <button
+              onClick={() =>
+                addAchievement({
+                  title: '',
+                  description: '',
+                  date: '',
+                })
+              }
+              className="flex items-center gap-2 bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white px-3 py-2 rounded-lg text-sm font-semibold transition-all"
+            >
+              <Plus className="w-4 h-4" />
+              Add Achievement
+            </button>
+          </div>
+
+          {currentResume.achievements.length === 0 ? (
+            <p className="text-slate-500 dark:text-slate-400 text-sm">No achievements added yet</p>
+          ) : (
+            <div className="space-y-3">
+              {currentResume.achievements.map((ach) => (
+                <div key={ach.id} className="bg-white/50 dark:bg-slate-800/30 rounded-lg p-3 space-y-2">
+                  <div className="flex justify-between gap-3">
+                    <input
+                      type="text"
+                      value={ach.title}
+                      onChange={(e) => updateAchievement(ach.id, { title: e.target.value })}
+                      className="flex-1 font-semibold border-none outline-none bg-transparent text-slate-800 dark:text-white"
+                      placeholder="Achievement Title"
+                    />
+                    <button
+                      onClick={() => deleteAchievement(ach.id)}
+                      className="text-red-500 hover:text-red-700 p-1"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                  </div>
+                  <textarea
+                    value={ach.description}
+                    onChange={(e) => updateAchievement(ach.id, { description: e.target.value })}
+                    className="w-full text-sm border-none outline-none bg-transparent text-slate-600 dark:text-slate-400"
+                    placeholder="Description"
+                    rows={2}
+                  />
+                  <input
+                    type="month"
+                    value={ach.date}
+                    onChange={(e) => updateAchievement(ach.id, { date: e.target.value })}
+                    className="text-sm border-none outline-none bg-transparent text-slate-600 dark:text-slate-400"
+                  />
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+
+        {/* Links Section */}
+        <div className="bg-gradient-to-br from-white to-teal-50 dark:from-slate-900 dark:to-teal-950/30 rounded-xl border border-teal-200 dark:border-teal-800 p-5 sm:p-6 shadow-sm">
+          <div className="flex justify-between items-center mb-4">
+            <div className="flex items-center gap-2">
+              <div className="h-2 w-2 rounded-full bg-gradient-to-r from-teal-500 to-cyan-500"></div>
+              <h3 className="text-lg font-semibold text-teal-900 dark:text-teal-200">Links</h3>
+            </div>
+            <button
+              onClick={() =>
+                addLink({
+                  type: 'github',
+                  url: '',
+                  label: '',
+                })
+              }
+              className="flex items-center gap-2 bg-gradient-to-r from-teal-600 to-cyan-600 hover:from-teal-700 hover:to-cyan-700 text-white px-3 py-2 rounded-lg text-sm font-semibold transition-all"
+            >
+              <Plus className="w-4 h-4" />
+              Add Link
+            </button>
+          </div>
+
+          {currentResume.links.length === 0 ? (
+            <p className="text-slate-500 dark:text-slate-400 text-sm">No links added yet</p>
+          ) : (
+            <div className="space-y-3">
+              {currentResume.links.map((link) => (
+                <div key={link.id} className="bg-white/50 dark:bg-slate-800/30 rounded-lg p-3 space-y-2">
+                  <div className="flex justify-between gap-3 items-start">
+                    <div className="flex-1 space-y-2">
+                      <select
+                        value={link.type}
+                        onChange={(e) =>
+                          updateLink(link.id, { type: e.target.value as any })
+                        }
+                        className="w-full text-sm border-none outline-none bg-transparent text-slate-600 dark:text-slate-400"
+                      >
+                        <option value="github">GitHub</option>
+                        <option value="linkedin">LinkedIn</option>
+                        <option value="portfolio">Portfolio</option>
+                        <option value="other">Other</option>
+                      </select>
+                      <input
+                        type="text"
+                        value={link.label}
+                        onChange={(e) => updateLink(link.id, { label: e.target.value })}
+                        className="w-full text-sm border-none outline-none bg-transparent text-slate-600 dark:text-slate-400"
+                        placeholder="Label"
+                      />
+                      <input
+                        type="url"
+                        value={link.url}
+                        onChange={(e) => updateLink(link.id, { url: e.target.value })}
+                        className="w-full text-sm border-none outline-none bg-transparent text-slate-600 dark:text-slate-400"
+                        placeholder="URL"
+                      />
+                    </div>
+                    <button
+                      onClick={() => deleteLink(link.id)}
+                      className="text-red-500 hover:text-red-700 p-1"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+
+        {/* Custom Sections */}
+        <div className="bg-gradient-to-br from-white to-lime-50 dark:from-slate-900 dark:to-lime-950/30 rounded-xl border border-lime-200 dark:border-lime-800 p-5 sm:p-6 shadow-sm">
+          <div className="flex justify-between items-center mb-4">
+            <div className="flex items-center gap-2">
+              <div className="h-2 w-2 rounded-full bg-gradient-to-r from-lime-500 to-green-500"></div>
+              <h3 className="text-lg font-semibold text-lime-900 dark:text-lime-200">Custom Sections</h3>
+            </div>
+            <button
+              onClick={() =>
+                addCustomSection({
+                  title: '',
+                  content: '',
+                })
+              }
+              className="flex items-center gap-2 bg-gradient-to-r from-lime-600 to-green-600 hover:from-lime-700 hover:to-green-700 text-white px-3 py-2 rounded-lg text-sm font-semibold transition-all"
+            >
+              <Plus className="w-4 h-4" />
+              Add Custom Section
+            </button>
+          </div>
+
+          {currentResume.customSections.length === 0 ? (
+            <p className="text-slate-500 dark:text-slate-400 text-sm">No custom sections added yet. Add your own sections like Languages, Volunteer Work, etc.</p>
+          ) : (
+            <div className="space-y-3">
+              {currentResume.customSections.map((section) => (
+                <div key={section.id} className="bg-white/50 dark:bg-slate-800/30 rounded-lg p-3 space-y-2">
+                  <div className="flex justify-between gap-3">
+                    <input
+                      type="text"
+                      value={section.title}
+                      onChange={(e) => updateCustomSection(section.id, { title: e.target.value })}
+                      className="flex-1 font-semibold border-none outline-none bg-transparent text-slate-800 dark:text-white"
+                      placeholder="Section Title (e.g., Languages, Volunteer Work)"
+                    />
+                    <button
+                      onClick={() => deleteCustomSection(section.id)}
+                      className="text-red-500 hover:text-red-700 p-1"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                  </div>
+                  <textarea
+                    value={section.content}
+                    onChange={(e) => updateCustomSection(section.id, { content: e.target.value })}
+                    className="w-full text-sm border border-slate-300 dark:border-slate-600 rounded-lg p-2 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 focus:ring-2 focus:ring-lime-500"
+                    placeholder="Enter section content..."
+                    rows={4}
+                  />
+                </div>
+              ))}
+            </div>
           )}
         </div>
 

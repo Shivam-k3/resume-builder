@@ -29,7 +29,7 @@ const ModernTemplate = ({ resume }: TemplateProps) => {
 
       {/* Render sections in order */}
       {resume.sectionOrder.map((section) => {
-        if (section === 'experience' && resume.experience.length > 0) {
+        if (section === 'experience' && resume.experience.length > 0 && resume.profileType === 'professional') {
           return (
             <div key={section} className="mb-6">
               <h2 className="text-2xl font-bold text-gray-900 border-b-2 border-blue-600 pb-2 mb-4">
@@ -188,6 +188,16 @@ const ModernTemplate = ({ resume }: TemplateProps) => {
 
         return null;
       })}
+
+      {/* Custom Sections */}
+      {resume.customSections.map((section) => (
+        <div key={section.id} className="mb-6">
+          <h2 className="text-2xl font-bold text-gray-900 border-b-2 border-blue-600 pb-2 mb-4">
+            {section.title}
+          </h2>
+          <div className="text-gray-700 whitespace-pre-wrap">{section.content}</div>
+        </div>
+      ))}
     </div>
   );
 };

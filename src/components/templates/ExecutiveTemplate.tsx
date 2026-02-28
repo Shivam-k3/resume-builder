@@ -147,6 +147,16 @@ const ExecutiveTemplate = ({ resume }: TemplateProps) => {
         </div>
       )}
 
+      {/* Custom Sections */}
+      {resume.customSections.map((section) => (
+        <div key={section.id} className="mb-8">
+          <h2 className="text-2xl font-bold text-indigo-700 mb-5 pb-2 border-b-4 border-indigo-700">
+            {section.title}
+          </h2>
+          <div className="text-gray-700 whitespace-pre-wrap">{section.content}</div>
+        </div>
+      ))}
+
       {/* Decorative Bottom Bar */}
       <div className="mt-8 h-1 bg-gradient-to-r from-indigo-700 to-purple-700"></div>
     </div>

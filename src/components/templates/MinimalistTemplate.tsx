@@ -131,6 +131,16 @@ const MinimalistTemplate = ({ resume }: TemplateProps) => {
           </div>
         </div>
       )}
+
+      {/* Custom Sections */}
+      {resume.customSections.map((section) => (
+        <div key={section.id} className="mb-8">
+          <h2 className="text-xs font-bold text-gray-900 uppercase tracking-widest mb-4">
+            {section.title}
+          </h2>
+          <div className="text-sm text-gray-700 whitespace-pre-wrap">{section.content}</div>
+        </div>
+      ))}
     </div>
   );
 };

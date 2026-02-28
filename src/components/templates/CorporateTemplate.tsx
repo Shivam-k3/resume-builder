@@ -33,7 +33,7 @@ const CorporateTemplate = ({ resume }: TemplateProps) => {
 
       {/* Render sections */}
       {resume.sectionOrder.map((section) => {
-        if (section === 'experience' && resume.experience.length > 0) {
+        if (section === 'experience' && resume.experience.length > 0 && resume.profileType === 'professional') {
           return (
             <div key={section} className="mb-6">
               <h2 className="text-lg font-bold text-gray-800 uppercase mb-3">
@@ -134,6 +134,16 @@ const CorporateTemplate = ({ resume }: TemplateProps) => {
 
         return null;
       })}
+
+      {/* Custom Sections */}
+      {resume.customSections.map((section) => (
+        <div key={section.id} className="mb-6">
+          <h2 className="text-lg font-bold text-gray-800 uppercase mb-3">
+            {section.title}
+          </h2>
+          <div className="text-gray-700 whitespace-pre-wrap text-sm">{section.content}</div>
+        </div>
+      ))}
     </div>
   );
 };

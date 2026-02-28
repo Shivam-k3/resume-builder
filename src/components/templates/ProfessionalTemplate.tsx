@@ -29,8 +29,8 @@ const ProfessionalTemplate = ({ resume }: TemplateProps) => {
         )}
       </div>
 
-      {/* Experience */}
-      {resume.experience.length > 0 && (
+      {/* Experience - Only for Professionals */}
+      {resume.experience.length > 0 && resume.profileType === 'professional' && (
         <div className="mb-8">
           <h2 className="text-lg font-bold text-gray-800 uppercase tracking-wide mb-4 pb-2 border-b-2 border-gray-400">
             Professional Experience
@@ -134,6 +134,20 @@ const ProfessionalTemplate = ({ resume }: TemplateProps) => {
               </div>
             </div>
           )}
+        </div>
+      )}
+
+      {/* Custom Sections */}
+      {resume.customSections.length > 0 && (
+        <div>
+          {resume.customSections.map((section) => (
+            <div key={section.id} className="mb-8">
+              <h2 className="text-lg font-bold text-gray-800 uppercase tracking-wide mb-3 pb-2 border-b-2 border-gray-400">
+                {section.title}
+              </h2>
+              <div className="text-sm text-gray-700 whitespace-pre-wrap">{section.content}</div>
+            </div>
+          ))}
         </div>
       )}
     </div>

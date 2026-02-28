@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
-import type { Resume, SectionType } from '../types/resume';
+import type { Resume, SectionType, ProfileType } from '../types/resume';
 
 interface ResumeState {
   resumes: Resume[];
@@ -37,6 +37,11 @@ interface ResumeState {
   updateLink: (id: string, data: any) => void;
   deleteLink: (id: string) => void;
   updatePersonalInfo: (data: any) => void;
+  addCustomSection: (section: any) => void;
+  updateCustomSection: (id: string, data: any) => void;
+  deleteCustomSection: (id: string) => void;
+  updateProfileType: (type: ProfileType) => void;
+  updateTargetJobProfile: (jobProfile: string) => void;
 }
 
 const createEmptyResume = (name: string): Resume => ({
@@ -57,8 +62,11 @@ const createEmptyResume = (name: string): Resume => ({
   certifications: [],
   achievements: [],
   links: [],
+  customSections: [],
   sectionOrder: ['personalInfo', 'experience', 'education', 'skills', 'projects', 'certifications', 'achievements', 'links'],
   template: 'modern',
+  profileType: 'professional',
+  targetJobProfile: '',
   createdAt: new Date().toISOString(),
   updatedAt: new Date().toISOString(),
 });
@@ -358,9 +366,81 @@ export const useResumeStore = create<ResumeState>()(
           });
         }
       },
+
+      addCustomSection: (section: any) => {
+        const currentResume = get().currentResume;
+        if (currentResume) {
+          get().updateResume(currentResume.id, {
+            customSections: [...currentResume.customSections, { ...section, id: Date.now().toString() }],
+          });
+        }
+      },
+
+      updateCustomSection: (id: string, data: any) => {
+        const currentResume = get().currentResume;
+        if (currentResume) {
+          get().updateResume(currentResume.id, {
+            customSections: currentResume.customSections.map((s) => (s.id === id ? { ...s, ...data } : s)),
+          });
+        }
+      },
+
+      deleteCustomSection: (id: string) => {
+        const currentResume = get().currentResume;
+        if (currentResume) {
+          get().updateResume(currentResume.id, {
+            customSections: currentResume.customSections.filter((s) => s.id !== id),
+          });
+        }
+      },
+
+      updateProfileType: (type: ProfileType) => {
+        const currentResume = get().currentResume;
+        if (currentResume) {
+          get().updateResume(currentResume.id, { profileType: type });
+        }
+      },
+
+      updateTargetJobProfile: (jobProfile: string) => {
+        const currentResume = get().currentResume;
+        if (currentResume) {
+          get().updateResume(currentResume.id, { targetJobProfile: jobProfile });
+        }
+      },
     }),
     {
       name: 'resume-storage',
+      merge: (persistedState: unknown, currentState: ResumeState): ResumeState => {
+        // Handle migration from old schema to new schema
+        const persisted = persistedState as any;
+        if (persisted?.resumes) {
+          const migratedResumes = persisted.resumes.map((resume: any) => ({
+            ...resume,
+            customSections: resume.customSections || [],
+            profileType: resume.profileType || 'professional',
+            targetJobProfile: resume.targetJobProfile || '',
+          }));
+          
+          let currentResume = persisted.currentResume;
+          if (currentResume) {
+            currentResume = {
+              ...currentResume,
+              customSections: currentResume.customSections || [],
+              profileType: currentResume.profileType || 'professional',
+              targetJobProfile: currentResume.targetJobProfile || '',
+            };
+          }
+          
+          return {
+            ...currentState,
+            ...persisted,
+            resumes: migratedResumes,
+            currentResume,
+          };
+        }
+        
+        return { ...currentState, ...(persisted || {}) };
+      },
     }
   )
 );

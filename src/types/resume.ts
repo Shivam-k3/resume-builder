@@ -67,6 +67,12 @@ export interface Link {
   label: string;
 }
 
+export interface CustomSection {
+  id: string;
+  title: string;
+  content: string;
+}
+
 export type SectionType = 
   | 'personalInfo'
   | 'education'
@@ -76,6 +82,8 @@ export type SectionType =
   | 'certifications'
   | 'achievements'
   | 'links';
+
+export type ProfileType = 'student' | 'professional';
 
 export interface Resume {
   id: string;
@@ -88,8 +96,11 @@ export interface Resume {
   certifications: Certification[];
   achievements: Achievement[];
   links: Link[];
+  customSections: CustomSection[];
   sectionOrder: SectionType[];
   template: 'modern' | 'corporate' | 'creative' | 'minimalist' | 'professional' | 'techfocus' | 'executive';
+  profileType: ProfileType;
+  targetJobProfile: string;
   createdAt: string;
   updatedAt: string;
 }
