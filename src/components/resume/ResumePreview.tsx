@@ -1,4 +1,4 @@
-import { useRef } from 'react';
+import { useRef, useState } from 'react';
 import { useResumeStore } from '../../store/resumeStore';
 import { useUIStore } from '../../store/uiStore';
 import ModernTemplate from '../templates/ModernTemplate';
@@ -8,13 +8,15 @@ import MinimalistTemplate from '../templates/MinimalistTemplate';
 import ProfessionalTemplate from '../templates/ProfessionalTemplate';
 import TechFocusTemplate from '../templates/TechFocusTemplate';
 import ExecutiveTemplate from '../templates/ExecutiveTemplate';
-import { ZoomIn, ZoomOut, Download, Maximize2 } from 'lucide-react';
+import { ZoomIn, ZoomOut, Download, Maximize2, Globe } from 'lucide-react';
 import { useReactToPrint } from 'react-to-print';
+import PortfolioExportModal from './PortfolioExportModal';
 
 const ResumePreview = () => {
   const { currentResume } = useResumeStore();
   const { zoomLevel, setZoomLevel, selectedTemplate } = useUIStore();
   const printRef = useRef<HTMLDivElement>(null);
+  const [isPortfolioOpen, setIsPortfolioOpen] = useState(false);
 
   const handlePrint = useReactToPrint({
     contentRef: printRef,
@@ -77,6 +79,13 @@ const ResumePreview = () => {
             Fit
           </button>
           <button
+            onClick={() => setIsPortfolioOpen(true)}
+            className="h-10 px-4 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 text-sm font-bold flex items-center gap-2 transition-all"
+          >
+            <Globe className="w-4 h-4" />
+            Create Portfolio
+          </button>
+          <button
             onClick={handlePrint}
             className="h-10 px-4 rounded-xl bg-slate-900 hover:bg-slate-850 dark:bg-slate-100 dark:hover:bg-slate-200 text-white dark:text-slate-900 text-sm font-bold flex items-center gap-2 transition-all shadow-sm"
           >
@@ -99,6 +108,13 @@ const ResumePreview = () => {
           <div ref={printRef}>{renderTemplate()}</div>
         </div>
       </div>
+
+      {/* Portfolio Export Dialog */}
+      <PortfolioExportModal
+        isOpen={isPortfolioOpen}
+        onClose={() => setIsPortfolioOpen(false)}
+        resume={currentResume}
+      />
     </div>
   );
 };

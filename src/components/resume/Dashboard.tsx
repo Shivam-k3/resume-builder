@@ -4,9 +4,8 @@ import { useAuthStore } from '../../store/authStore';
 import { useUIStore } from '../../store/uiStore';
 import ResumeEditor from './ResumeEditor';
 import ResumePreview from './ResumePreview';
-import SettingsModal from './SettingsModal';
 import AIImportModal from './AIImportModal';
-import { Search, Moon, Sun, Plus, Copy, Trash2, LogOut, Eye, Settings, Sparkles } from 'lucide-react';
+import { Search, Moon, Sun, Plus, Copy, Trash2, LogOut, Eye, Sparkles } from 'lucide-react';
 import logoImg from '../../assets/logo.png';
 
 const Dashboard = () => {
@@ -15,7 +14,6 @@ const Dashboard = () => {
   const { user, logout } = useAuthStore();
   const { darkMode, toggleDarkMode } = useUIStore();
 
-  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [isImportOpen, setIsImportOpen] = useState(false);
 
   useEffect(() => {
@@ -72,13 +70,6 @@ const Dashboard = () => {
           </div>
 
           <div className="flex items-center gap-2 sm:gap-3">
-            <button
-              onClick={() => setIsSettingsOpen(true)}
-              className="h-10 w-10 rounded-xl border border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800 hover:border-slate-350 dark:hover:border-slate-655 flex items-center justify-center transition-all"
-              title="AI Settings"
-            >
-              <Settings className="w-5 h-5 text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-100" />
-            </button>
             <button
               onClick={() => toggleDarkMode()}
               className="h-10 w-10 rounded-xl border border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800 hover:border-slate-350 dark:hover:border-slate-655 flex items-center justify-center transition-all"
@@ -162,11 +153,9 @@ const Dashboard = () => {
         </div>
       </main>
 
-      <SettingsModal isOpen={isSettingsOpen} onClose={() => setIsSettingsOpen(false)} />
       <AIImportModal 
         isOpen={isImportOpen} 
         onClose={() => setIsImportOpen(false)} 
-        onOpenSettings={() => setIsSettingsOpen(true)} 
       />
     </div>
   );

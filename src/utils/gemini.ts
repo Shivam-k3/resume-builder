@@ -1,47 +1,34 @@
 import type { Resume } from '../types/resume';
 import type { KeywordSuggestion } from './keywordSuggestions';
 
-const GEMINI_MODEL = 'gemini-3.5-flash';
-const API_URL = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent`;
+// Client makes requests directly to the background proxy endpoint
+const API_URL = '/api/gemini/generateContent';
 
 export const getGeminiApiKey = (): string => {
-  if (typeof window !== 'undefined') {
-    const userKey = localStorage.getItem('gemini-api-key');
-    if (userKey) return userKey;
-  }
-  return import.meta.env.VITE_GEMINI_API_KEY || '';
+  return 'configured-on-backend';
 };
 
 export const hasGeminiApiKey = (): boolean => {
-  return getGeminiApiKey().trim().length > 0;
+  // Always true, backend proxy server has the key securely configured
+  return true;
 };
 
-export const saveGeminiApiKey = (key: string) => {
-  if (typeof window !== 'undefined') {
-    localStorage.setItem('gemini-api-key', key.trim());
-  }
+export const saveGeminiApiKey = (_key: string) => {
+  // No-op: API key is stored securely on the backend
 };
 
 export const clearGeminiApiKey = () => {
-  if (typeof window !== 'undefined') {
-    localStorage.removeItem('gemini-api-key');
-  }
+  // No-op: API key is managed securely on the backend
 };
 
 /**
- * Call Gemini API with a prompt
+ * Call secure backend proxy with a prompt
  */
 async function callGemini(prompt: string, jsonMode = false): Promise<string> {
-  const apiKey = getGeminiApiKey();
-  if (!apiKey) {
-    throw new Error('Gemini API key is not configured.');
-  }
-
-  const response = await fetch(`${API_URL}`, {
+  const response = await fetch(API_URL, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
-      'x-goog-api-key': apiKey,
     },
     body: JSON.stringify({
       contents: [{
