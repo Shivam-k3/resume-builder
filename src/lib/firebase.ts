@@ -6,23 +6,22 @@ import {
   browserLocalPersistence 
 } from 'firebase/auth';
 
-// Replace these with your Firebase project credentials from Firebase Console
-const firebaseConfig = {
-  apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
-  authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN,
-  projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID,
-  storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET,
-  messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID,
-  appId: import.meta.env.VITE_FIREBASE_APP_ID,
+const getEnvVar = (val: string | undefined, fallback: string): string => {
+  if (!val || val === 'your_api_key_here' || val === 'your_project_id' || val.trim() === '') {
+    return fallback;
+  }
+  return val;
 };
 
-// Debug: Log if environment variables are missing (only log presence, not values)
-if (!firebaseConfig.apiKey) {
-  console.error('❌ VITE_FIREBASE_API_KEY is missing! Check Vercel environment variables.');
-}
-if (!firebaseConfig.projectId) {
-  console.error('❌ VITE_FIREBASE_PROJECT_ID is missing! Check Vercel environment variables.');
-}
+// Replace these with your Firebase project credentials from Firebase Console
+const firebaseConfig = {
+  apiKey: getEnvVar(import.meta.env.VITE_FIREBASE_API_KEY, 'AIzaSyMockKeyForLocalTestingOnly12345'),
+  authDomain: getEnvVar(import.meta.env.VITE_FIREBASE_AUTH_DOMAIN, 'mock-project.firebaseapp.com'),
+  projectId: getEnvVar(import.meta.env.VITE_FIREBASE_PROJECT_ID, 'mock-project-id'),
+  storageBucket: getEnvVar(import.meta.env.VITE_FIREBASE_STORAGE_BUCKET, 'mock-project.appspot.com'),
+  messagingSenderId: getEnvVar(import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID, '1234567890'),
+  appId: getEnvVar(import.meta.env.VITE_FIREBASE_APP_ID, '1:1234567890:web:mockappid'),
+};
 
 // Initialize Firebase
 const app = initializeApp(firebaseConfig);

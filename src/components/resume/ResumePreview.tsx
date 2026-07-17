@@ -49,20 +49,20 @@ const ResumePreview = () => {
   };
 
   return (
-    <div className="h-full flex flex-col bg-gradient-to-br from-slate-100 to-slate-50 dark:from-slate-950 dark:to-slate-900">
+    <div className="h-full flex flex-col bg-slate-100 dark:bg-slate-950">
       {/* Preview Controls */}
-      <div className="bg-gradient-to-r from-white to-cyan-50 dark:from-slate-900 dark:to-cyan-900/20 border-b border-slate-200 dark:border-slate-800 p-3 sm:p-4 flex flex-wrap justify-between items-center gap-3 shadow-sm">
-        <div className="flex items-center gap-2 sm:gap-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 p-1">
+      <div className="bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 p-3 sm:p-4 flex flex-wrap justify-between items-center gap-3 shadow-sm">
+        <div className="flex items-center gap-2 sm:gap-3 rounded-xl border border-slate-200 dark:border-slate-705 bg-white dark:bg-slate-800 p-1">
           <button
             onClick={() => setZoomLevel(Math.max(50, zoomLevel - 10))}
-            className="p-2 hover:bg-cyan-100 dark:hover:bg-cyan-900/30 rounded-lg transition-colors text-cyan-600 dark:text-cyan-400"
+            className="p-2 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg transition-colors text-slate-600 dark:text-slate-400"
           >
             <ZoomOut className="w-4 h-4" />
           </button>
-          <span className="text-sm font-semibold min-w-14 text-center">{zoomLevel}%</span>
+          <span className="text-sm font-bold min-w-14 text-center">{zoomLevel}%</span>
           <button
             onClick={() => setZoomLevel(Math.min(150, zoomLevel + 10))}
-            className="p-2 hover:bg-cyan-100 dark:hover:bg-cyan-900/30 rounded-lg transition-colors text-cyan-600 dark:text-cyan-400"
+            className="p-2 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg transition-colors text-slate-600 dark:text-slate-400"
           >
             <ZoomIn className="w-4 h-4" />
           </button>
@@ -71,14 +71,14 @@ const ResumePreview = () => {
         <div className="flex items-center gap-2">
           <button
             onClick={() => setZoomLevel(100)}
-            className="h-10 px-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 text-sm font-medium flex items-center gap-2 transition-all"
+            className="h-10 px-3 rounded-xl border border-slate-205 dark:border-slate-700 bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 text-sm font-bold flex items-center gap-2 transition-all"
           >
             <Maximize2 className="w-4 h-4" />
             Fit
           </button>
           <button
             onClick={handlePrint}
-            className="h-10 px-4 rounded-xl bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-700 hover:to-blue-700 text-white text-sm font-semibold flex items-center gap-2 transition-all transform hover:scale-105 shadow-md"
+            className="h-10 px-4 rounded-xl bg-slate-900 hover:bg-slate-850 dark:bg-slate-100 dark:hover:bg-slate-200 text-white dark:text-slate-900 text-sm font-bold flex items-center gap-2 transition-all shadow-sm"
           >
             <Download className="w-4 h-4" />
             Export PDF

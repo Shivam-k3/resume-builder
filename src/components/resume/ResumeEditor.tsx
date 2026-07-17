@@ -1,7 +1,9 @@
+import { useState } from 'react';
 import { useResumeStore } from '../../store/resumeStore';
 import { useUIStore } from '../../store/uiStore';
-import { Plus, Trash2, GripVertical, Sparkles, LayoutTemplate } from 'lucide-react';
+import { Plus, Trash2, GripVertical, Sparkles, LayoutTemplate, Loader2 } from 'lucide-react';
 import { KeywordSuggester } from './KeywordSuggester';
+import { hasGeminiApiKey, optimizeText } from '../../utils/gemini';
 import {
   DndContext,
   closestCenter,
@@ -84,6 +86,66 @@ const ResumeEditor = () => {
     updateTargetJobProfile,
   } = useResumeStore();
   const { selectedTemplate, setSelectedTemplate } = useUIStore();
+  
+  const [optimizingId, setOptimizingId] = useState<string | null>(null);
+
+  const handleOptimizeText = async (
+    type: 'summary' | 'experience' | 'project',
+    itemId: string,
+    fieldName: string,
+    extraContext?: { role?: string; company?: string }
+  ) => {
+    if (!currentResume) return;
+
+    let textToOptimize = '';
+    let role = extraContext?.role || currentResume.personalInfo.title || 'Professional';
+    let company = extraContext?.company || 'Company';
+
+    if (type === 'summary') {
+      textToOptimize = currentResume.personalInfo.summary;
+    } else if (type === 'experience') {
+      const expItem = currentResume.experience.find(e => e.id === itemId);
+      if (expItem) {
+        textToOptimize = expItem.description.join('\n');
+        role = expItem.position || role;
+        company = expItem.company || company;
+      }
+    } else if (type === 'project') {
+      const projItem = currentResume.projects.find(p => p.id === itemId);
+      if (projItem) {
+        textToOptimize = projItem.description;
+        role = projItem.name || role;
+      }
+    }
+
+    if (!textToOptimize.trim()) {
+      alert('Please enter some text to optimize first.');
+      return;
+    }
+
+    const stateKey = `${itemId}-${fieldName}`;
+    setOptimizingId(stateKey);
+
+    try {
+      const optimized = await optimizeText(role, company, textToOptimize, type);
+      
+      if (type === 'summary') {
+        updatePersonalInfo({ summary: optimized });
+      } else if (type === 'experience') {
+        const lines = optimized.split('\n')
+          .map(l => l.replace(/^[\s*-•+]+/g, '').trim())
+          .filter(l => l.length > 0);
+        updateExperience(itemId, { description: lines });
+      } else if (type === 'project') {
+        updateProject(itemId, { description: optimized });
+      }
+    } catch (err: any) {
+      console.error(err);
+      alert('AI Optimization failed: ' + (err.message || 'Unknown error'));
+    } finally {
+      setOptimizingId(null);
+    }
+  };
 
   const sensors = useSensors(
     useSensor(PointerSensor),
@@ -113,27 +175,27 @@ const ResumeEditor = () => {
   };
 
   return (
-    <div className="h-full min-h-0 overflow-auto bg-gradient-to-br from-slate-50 to-blue-50 dark:from-slate-950 dark:to-blue-950">
+    <div className="h-full min-h-0 overflow-auto bg-slate-50 dark:bg-slate-950">
       <div className="w-full p-4 sm:p-6 space-y-5">
-        <div className="rounded-2xl border border-slate-200 dark:border-slate-800 bg-gradient-to-r from-white to-blue-50 dark:from-slate-900 dark:to-blue-900/20 p-4 sm:p-5 shadow-sm">
+        <div className="rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-4 sm:p-5 shadow-sm">
           <div className="flex items-center justify-between gap-3">
             <div>
-              <h2 className="text-xl sm:text-2xl font-black tracking-tight bg-gradient-to-r from-blue-600 to-cyan-600 dark:from-blue-400 dark:to-cyan-400 bg-clip-text text-transparent">Edit Resume</h2>
+              <h2 className="text-xl sm:text-2xl font-bold tracking-tight text-slate-800 dark:text-slate-100">Edit Resume</h2>
               <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">
                 {currentResume.profileType === 'student' 
                   ? '👨‍🎓 Student Profile - Showing: Education (Priority), Projects (Priority), Skills, Certifications & Achievements' 
                   : '💼 Professional Profile - Showing: Experience (Priority), Education, Skills, Projects & Certifications'}
               </p>
             </div>
-            <div className="hidden sm:flex items-center gap-2 rounded-xl bg-gradient-to-r from-amber-100 to-orange-100 dark:from-amber-900/40 dark:to-orange-900/40 text-amber-700 dark:text-amber-300 px-3 py-2 text-sm font-semibold">
-              <Sparkles className="w-4 h-4" />
+            <div className="hidden sm:flex items-center gap-2 rounded-xl border border-slate-200 dark:border-slate-800 text-slate-650 dark:text-slate-400 px-3 py-2 text-sm font-semibold">
+              <Sparkles className="w-4 h-4 text-slate-550" />
               ATS Ready
             </div>
           </div>
         </div>
 
         {/* Profile Type Selector */}
-        <div className="rounded-2xl border border-slate-200 dark:border-slate-800 bg-gradient-to-r from-white to-slate-50 dark:from-slate-900 dark:to-slate-800 p-4 sm:p-5 shadow-sm">
+        <div className="rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-4 sm:p-5 shadow-sm">
           <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
             <div>
               <h3 className="text-sm font-semibold text-slate-700 dark:text-slate-300 mb-2">Profile Type</h3>
@@ -144,8 +206,8 @@ const ResumeEditor = () => {
                 onClick={() => updateProfileType('student')}
                 className={`px-4 py-2 rounded-lg font-semibold text-sm transition-all ${
                   currentResume.profileType === 'student'
-                    ? 'bg-gradient-to-r from-blue-600 to-cyan-600 text-white shadow-lg'
-                    : 'border border-slate-300 dark:border-slate-600 text-slate-700 dark:text-slate-300 hover:border-blue-400 dark:hover:border-blue-400'
+                    ? 'bg-slate-900 dark:bg-slate-100 text-white dark:text-slate-900 shadow-sm'
+                    : 'border border-slate-200 dark:border-slate-700 text-slate-750 dark:text-slate-300 hover:border-slate-900 dark:hover:border-slate-100'
                 }`}
               >
                 👨‍🎓 Student
@@ -154,8 +216,8 @@ const ResumeEditor = () => {
                 onClick={() => updateProfileType('professional')}
                 className={`px-4 py-2 rounded-lg font-semibold text-sm transition-all ${
                   currentResume.profileType === 'professional'
-                    ? 'bg-gradient-to-r from-purple-600 to-pink-600 text-white shadow-lg'
-                    : 'border border-slate-300 dark:border-slate-600 text-slate-700 dark:text-slate-300 hover:border-purple-400 dark:hover:border-purple-400'
+                    ? 'bg-slate-900 dark:bg-slate-100 text-white dark:text-slate-900 shadow-sm'
+                    : 'border border-slate-200 dark:border-slate-700 text-slate-750 dark:text-slate-300 hover:border-slate-900 dark:hover:border-slate-100'
                 }`}
               >
                 💼 Working Professional
@@ -181,84 +243,101 @@ const ResumeEditor = () => {
         />
 
         {/* Personal Info Section */}
-        <div className="bg-gradient-to-br from-white to-indigo-50 dark:from-slate-900 dark:to-indigo-950/30 rounded-xl border border-indigo-200 dark:border-indigo-800 p-5 sm:p-6 shadow-sm">
+        <div className="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 p-5 sm:p-6 shadow-sm">
           <div className="flex items-center gap-2 mb-4">
-            <div className="h-2 w-2 rounded-full bg-gradient-to-r from-indigo-500 to-blue-500"></div>
-            <h3 className="text-lg font-semibold text-indigo-900 dark:text-indigo-200">Personal Information</h3>
+            <div className="h-1.5 w-1.5 rounded-full bg-slate-400 dark:bg-slate-500"></div>
+            <h3 className="text-md font-bold text-slate-800 dark:text-slate-100">Personal Information</h3>
           </div>
           <div className="space-y-4">
             <div>
-              <label className="block text-sm font-medium mb-1 text-slate-600 dark:text-slate-400">
+              <label className="block text-sm font-bold mb-1 text-slate-655 dark:text-slate-400">
                 Full Name
               </label>
               <input
                 type="text"
                 value={currentResume.personalInfo.fullName}
                 onChange={(e) => updatePersonalInfo({ fullName: e.target.value })}
-                className="w-full px-3 py-2.5 border border-slate-200 dark:border-slate-700 rounded-xl focus:ring-2 focus:ring-primary/30 dark:bg-slate-800 dark:text-white"
+                className="w-full px-3 py-2.5 border border-slate-200 dark:border-slate-700 rounded-xl focus:ring-2 focus:ring-slate-500/30 dark:bg-slate-800 dark:text-white"
                 placeholder="John Doe"
               />
             </div>
             <div>
-              <label className="block text-sm font-medium mb-1 text-slate-600 dark:text-slate-400">
+              <label className="block text-sm font-bold mb-1 text-slate-655 dark:text-slate-400">
                 Professional Title
               </label>
               <input
                 type="text"
                 value={currentResume.personalInfo.title}
                 onChange={(e) => updatePersonalInfo({ title: e.target.value })}
-                className="w-full px-3 py-2.5 border border-slate-200 dark:border-slate-700 rounded-xl focus:ring-2 focus:ring-primary/30 dark:bg-slate-800 dark:text-white"
+                className="w-full px-3 py-2.5 border border-slate-200 dark:border-slate-700 rounded-xl focus:ring-2 focus:ring-slate-500/30 dark:bg-slate-800 dark:text-white"
                 placeholder="Software Engineer"
               />
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
-                <label className="block text-sm font-medium mb-1 text-slate-600 dark:text-slate-400">
+                <label className="block text-sm font-bold mb-1 text-slate-655 dark:text-slate-400">
                   Email
                 </label>
                 <input
                   type="email"
                   value={currentResume.personalInfo.email}
                   onChange={(e) => updatePersonalInfo({ email: e.target.value })}
-                  className="w-full px-3 py-2.5 border border-slate-200 dark:border-slate-700 rounded-xl focus:ring-2 focus:ring-primary/30 dark:bg-slate-800 dark:text-white"
+                  className="w-full px-3 py-2.5 border border-slate-200 dark:border-slate-700 rounded-xl focus:ring-2 focus:ring-slate-500/30 dark:bg-slate-800 dark:text-white"
                   placeholder="john@example.com"
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium mb-1 text-slate-600 dark:text-slate-400">
+                <label className="block text-sm font-bold mb-1 text-slate-655 dark:text-slate-400">
                   Phone
                 </label>
                 <input
                   type="tel"
                   value={currentResume.personalInfo.phone}
                   onChange={(e) => updatePersonalInfo({ phone: e.target.value })}
-                  className="w-full px-3 py-2.5 border border-slate-200 dark:border-slate-700 rounded-xl focus:ring-2 focus:ring-primary/30 dark:bg-slate-800 dark:text-white"
+                  className="w-full px-3 py-2.5 border border-slate-200 dark:border-slate-700 rounded-xl focus:ring-2 focus:ring-slate-500/30 dark:bg-slate-800 dark:text-white"
                   placeholder="+1 234 567 8900"
                 />
               </div>
             </div>
             <div>
-              <label className="block text-sm font-medium mb-1 text-slate-600 dark:text-slate-400">
+              <label className="block text-sm font-bold mb-1 text-slate-655 dark:text-slate-400">
                 Location
               </label>
               <input
                 type="text"
                 value={currentResume.personalInfo.location}
                 onChange={(e) => updatePersonalInfo({ location: e.target.value })}
-                className="w-full px-3 py-2.5 border border-slate-200 dark:border-slate-700 rounded-xl focus:ring-2 focus:ring-primary/30 dark:bg-slate-800 dark:text-white"
+                className="w-full px-3 py-2.5 border border-slate-200 dark:border-slate-700 rounded-xl focus:ring-2 focus:ring-slate-500/30 dark:bg-slate-800 dark:text-white"
                 placeholder="San Francisco, CA"
               />
             </div>
             <div>
-              <label className="block text-sm font-medium mb-1 text-slate-600 dark:text-slate-400">
-                Summary
-              </label>
+              <div className="flex justify-between items-center mb-1">
+                <label className="block text-sm font-bold text-slate-655 dark:text-slate-400">
+                  Summary
+                </label>
+                {hasGeminiApiKey() && currentResume.personalInfo.summary.trim() && (
+                  <button
+                    onClick={() => handleOptimizeText('summary', 'personalInfo', 'summary')}
+                    disabled={optimizingId === 'personalInfo-summary'}
+                    className="text-[10px] bg-slate-900 hover:bg-slate-850 dark:bg-slate-100 dark:hover:bg-slate-200 text-white dark:text-slate-900 px-2 py-1 rounded-lg font-bold flex items-center gap-1 shadow-sm transition-all disabled:opacity-50 shrink-0"
+                  >
+                    {optimizingId === 'personalInfo-summary' ? (
+                      <Loader2 className="w-3 h-3 animate-spin" />
+                    ) : (
+                      <Sparkles className="w-3 h-3" />
+                    )}
+                    {optimizingId === 'personalInfo-summary' ? 'Optimizing...' : 'Optimize with AI'}
+                  </button>
+                )}
+              </div>
               <textarea
                 value={currentResume.personalInfo.summary}
                 onChange={(e) => updatePersonalInfo({ summary: e.target.value })}
                 rows={4}
-                className="w-full px-3 py-2.5 border border-slate-200 dark:border-slate-700 rounded-xl focus:ring-2 focus:ring-primary/30 dark:bg-slate-800 dark:text-white"
+                className="w-full px-3 py-2.5 border border-slate-200 dark:border-slate-700 rounded-xl focus:ring-2 focus:ring-primary/30 dark:bg-slate-800 dark:text-white text-sm"
                 placeholder="Brief professional summary..."
+                disabled={optimizingId === 'personalInfo-summary'}
               />
             </div>
           </div>
@@ -266,11 +345,11 @@ const ResumeEditor = () => {
 
         {/* Experience Section - For Working Professionals */}
         {currentResume.profileType === 'professional' && (
-        <div className="bg-gradient-to-br from-white to-orange-50 dark:from-slate-900 dark:to-orange-950/30 rounded-xl border border-orange-200 dark:border-orange-800 p-5 sm:p-6 shadow-sm">
+        <div className="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 p-5 sm:p-6 shadow-sm">
           <div className="flex justify-between items-center mb-4">
             <div className="flex items-center gap-2">
-              <div className="h-2 w-2 rounded-full bg-gradient-to-r from-orange-500 to-red-500"></div>
-              <h3 className="text-lg font-semibold text-orange-900 dark:text-orange-200">Experience</h3>
+              <div className="h-1.5 w-1.5 rounded-full bg-slate-400 dark:bg-slate-500"></div>
+              <h3 className="text-md font-bold text-slate-800 dark:text-slate-100">Experience</h3>
             </div>
             <button
               onClick={() =>
@@ -284,7 +363,7 @@ const ResumeEditor = () => {
                   description: [''],
                 })
               }
-              className="flex items-center gap-2 bg-gradient-to-r from-orange-600 to-red-600 hover:from-orange-700 hover:to-red-700 text-white px-3 py-2 rounded-lg text-sm font-semibold transition-all"
+              className="flex items-center gap-2 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:border-slate-900 dark:hover:border-slate-100 hover:bg-slate-50 dark:hover:bg-slate-805 px-3 py-2 rounded-lg text-sm font-semibold transition-all"
             >
               <Plus className="w-4 h-4" />
               Add Experience
@@ -329,9 +408,95 @@ const ResumeEditor = () => {
                         onChange={(e) =>
                           updateExperience(exp.id, { company: e.target.value })
                         }
-                        className="w-full text-sm border-none outline-none bg-transparent text-slate-600 dark:text-slate-400"
+                        className="w-full text-sm border-none outline-none bg-transparent text-slate-600 dark:text-slate-400 font-medium"
                         placeholder="Company"
                       />
+                      
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 mt-2 pt-2 border-t border-slate-100 dark:border-slate-800/40">
+                        <input
+                          type="text"
+                          value={exp.location || ''}
+                          onChange={(e) =>
+                            updateExperience(exp.id, { location: e.target.value })
+                          }
+                          className="w-full text-xs bg-slate-50 dark:bg-slate-800 px-2.5 py-1.5 rounded-xl border border-slate-200 dark:border-slate-700 outline-none text-slate-700 dark:text-slate-300"
+                          placeholder="Location (e.g. San Francisco, CA)"
+                        />
+                        <div className="flex items-center gap-1.5 px-1">
+                          <input
+                            type="checkbox"
+                            checked={exp.current || false}
+                            onChange={(e) =>
+                              updateExperience(exp.id, { current: e.target.checked })
+                            }
+                            id={`exp-current-${exp.id}`}
+                            className="rounded border-slate-300 dark:border-slate-700 text-orange-500 focus:ring-orange-500/30 w-3.5 h-3.5"
+                          />
+                          <label htmlFor={`exp-current-${exp.id}`} className="text-xs text-slate-650 dark:text-slate-400 font-medium">
+                            Current Role
+                          </label>
+                        </div>
+                      </div>
+                      
+                      <div className="grid grid-cols-2 gap-2 mt-2">
+                        <div className="space-y-0.5">
+                          <label className="text-[9px] uppercase font-bold text-slate-500 block">Start Date</label>
+                          <input
+                            type="month"
+                            value={exp.startDate || ''}
+                            onChange={(e) =>
+                              updateExperience(exp.id, { startDate: e.target.value })
+                            }
+                            className="w-full text-xs bg-slate-50 dark:bg-slate-800 px-2.5 py-1.5 rounded-xl border border-slate-200 dark:border-slate-700 outline-none text-slate-700 dark:text-slate-300"
+                          />
+                        </div>
+                        {!exp.current && (
+                          <div className="space-y-0.5">
+                            <label className="text-[9px] uppercase font-bold text-slate-500 block">End Date</label>
+                            <input
+                              type="month"
+                              value={exp.endDate || ''}
+                              onChange={(e) =>
+                                updateExperience(exp.id, { endDate: e.target.value })
+                              }
+                              className="w-full text-xs bg-slate-50 dark:bg-slate-800 px-2.5 py-1.5 rounded-xl border border-slate-200 dark:border-slate-700 outline-none text-slate-700 dark:text-slate-300"
+                            />
+                          </div>
+                        )}
+                      </div>
+
+                      <div className="mt-2.5 space-y-1">
+                        <div className="flex justify-between items-center">
+                          <label className="text-[9px] uppercase font-bold text-slate-500">
+                            Description (One bullet per line)
+                          </label>
+                          {hasGeminiApiKey() && exp.description.join('\n').trim() && (
+                            <button
+                              type="button"
+                              onClick={() => handleOptimizeText('experience', exp.id, 'description', { role: exp.position, company: exp.company })}
+                              disabled={optimizingId === `${exp.id}-description`}
+                              className="text-[9px] bg-gradient-to-r from-orange-500 to-red-500 hover:from-orange-600 hover:to-red-650 text-white px-2 py-0.5 rounded font-bold flex items-center gap-1 shadow-sm transition-all transform hover:scale-105 disabled:opacity-50"
+                            >
+                              {optimizingId === `${exp.id}-description` ? (
+                                <Loader2 className="w-2.5 h-2.5 animate-spin" />
+                              ) : (
+                                <Sparkles className="w-2.5 h-2.5" />
+                              )}
+                              {optimizingId === `${exp.id}-description` ? 'Optimizing...' : 'Optimize with AI'}
+                            </button>
+                          )}
+                        </div>
+                        <textarea
+                          value={exp.description ? exp.description.join('\n') : ''}
+                          onChange={(e) =>
+                            updateExperience(exp.id, { description: e.target.value.split('\n') })
+                          }
+                          className="w-full text-xs border border-slate-205 dark:border-slate-700 rounded-lg p-2.5 bg-white dark:bg-slate-800 text-slate-750 dark:text-slate-300 focus:ring-2 focus:ring-orange-500/30 outline-none"
+                          placeholder="e.g. Led a team of 3 developers to launch the product.&#10;Optimized API performance, reducing response times by 30%."
+                          rows={4}
+                          disabled={optimizingId === `${exp.id}-description`}
+                        />
+                      </div>
                     </div>
                   </SortableItem>
                 ))}
@@ -342,14 +507,14 @@ const ResumeEditor = () => {
         )}
 
         {/* Education Section - For Both but emphasized for Students */}
-        <div className="bg-gradient-to-br from-white to-cyan-50 dark:from-slate-900 dark:to-cyan-950/30 rounded-xl border border-cyan-200 dark:border-cyan-800 p-5 sm:p-6 shadow-sm">
+        <div className="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 p-5 sm:p-6 shadow-sm">
           <div className="flex justify-between items-center mb-4">
             <div className="flex items-center gap-2">
-              <div className="h-2 w-2 rounded-full bg-gradient-to-r from-cyan-500 to-blue-500"></div>
+              <div className="h-1.5 w-1.5 rounded-full bg-slate-400 dark:bg-slate-500"></div>
               {currentResume.profileType === 'student' ? (
-                <h3 className="text-lg font-semibold text-cyan-900 dark:text-cyan-200">Education ✨ (Priority)</h3>
+                <h3 className="text-md font-bold text-slate-800 dark:text-slate-100">Education ✨ (Priority)</h3>
               ) : (
-                <h3 className="text-lg font-semibold text-cyan-900 dark:text-cyan-200">Education</h3>
+                <h3 className="text-md font-bold text-slate-800 dark:text-slate-100">Education</h3>
               )}
             </div>
             <button
@@ -363,7 +528,7 @@ const ResumeEditor = () => {
                   description: '',
                 })
               }
-              className="flex items-center gap-2 bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-700 hover:to-blue-700 text-white px-3 py-2 rounded-lg text-sm font-semibold transition-all"
+              className="flex items-center gap-2 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:border-slate-900 dark:hover:border-slate-100 hover:bg-slate-50 dark:hover:bg-slate-805 px-3 py-2 rounded-lg text-sm font-semibold transition-all"
             >
               <Plus className="w-4 h-4" />
               Add Education
@@ -434,11 +599,11 @@ const ResumeEditor = () => {
 
         {/* Projects Section - For Students */}
         {currentResume.profileType === 'student' && (
-        <div className="bg-gradient-to-br from-white to-green-50 dark:from-slate-900 dark:to-green-950/30 rounded-xl border border-green-200 dark:border-green-800 p-5 sm:p-6 shadow-sm">
+        <div className="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 p-5 sm:p-6 shadow-sm">
           <div className="flex justify-between items-center mb-4">
             <div className="flex items-center gap-2">
-              <div className="h-2 w-2 rounded-full bg-gradient-to-r from-green-500 to-emerald-500"></div>
-              <h3 className="text-lg font-semibold text-green-900 dark:text-green-200">Projects ✨ (Priority)</h3>
+              <div className="h-1.5 w-1.5 rounded-full bg-slate-400 dark:bg-slate-500"></div>
+              <h3 className="text-md font-bold text-slate-800 dark:text-slate-100">Projects ✨ (Priority)</h3>
             </div>
             <button
               onClick={() =>
@@ -451,7 +616,7 @@ const ResumeEditor = () => {
                   endDate: '',
                 })
               }
-              className="flex items-center gap-2 bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white px-3 py-2 rounded-lg text-sm font-semibold transition-all"
+              className="flex items-center gap-2 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:border-slate-900 dark:hover:border-slate-100 hover:bg-slate-50 dark:hover:bg-slate-805 px-3 py-2 rounded-lg text-sm font-semibold transition-all"
             >
               <Plus className="w-4 h-4" />
               Add Project
@@ -479,13 +644,34 @@ const ResumeEditor = () => {
                       <Trash2 className="w-4 h-4" />
                     </button>
                   </div>
-                  <textarea
-                    value={proj.description}
-                    onChange={(e) => updateProject(proj.id, { description: e.target.value })}
-                    className="w-full text-sm border-none outline-none bg-transparent text-slate-600 dark:text-slate-400"
-                    placeholder="Description"
-                    rows={2}
-                  />
+                  <div className="space-y-1">
+                    <div className="flex justify-between items-center">
+                      <label className="text-[10px] uppercase font-bold text-slate-500">Description</label>
+                      {hasGeminiApiKey() && proj.description.trim() && (
+                        <button
+                          type="button"
+                          onClick={() => handleOptimizeText('project', proj.id, 'description', { role: proj.name })}
+                          disabled={optimizingId === `${proj.id}-description`}
+                          className="text-[9px] bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white px-2 py-0.5 rounded font-bold flex items-center gap-1 shadow-sm transition-all transform hover:scale-105 disabled:opacity-50 shrink-0"
+                        >
+                          {optimizingId === `${proj.id}-description` ? (
+                            <Loader2 className="w-2.5 h-2.5 animate-spin" />
+                          ) : (
+                            <Sparkles className="w-2.5 h-2.5" />
+                          )}
+                          {optimizingId === `${proj.id}-description` ? 'Optimizing...' : 'Optimize with AI'}
+                        </button>
+                      )}
+                    </div>
+                    <textarea
+                      value={proj.description}
+                      onChange={(e) => updateProject(proj.id, { description: e.target.value })}
+                      className="w-full text-sm border border-slate-200 dark:border-slate-700 rounded-lg p-2 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 focus:ring-2 focus:ring-green-500/30"
+                      placeholder="Project Description"
+                      rows={2}
+                      disabled={optimizingId === `${proj.id}-description`}
+                    />
+                  </div>
                   <input
                     type="text"
                     value={proj.technologies.join(', ')}
@@ -512,11 +698,11 @@ const ResumeEditor = () => {
         )}
 
         {/* Skills Section - For Both */}
-        <div className="bg-gradient-to-br from-white to-pink-50 dark:from-slate-900 dark:to-pink-950/30 rounded-xl border border-pink-200 dark:border-pink-800 p-5 sm:p-6 shadow-sm">
+        <div className="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 p-5 sm:p-6 shadow-sm">
           <div className="flex justify-between items-center mb-4">
             <div className="flex items-center gap-2">
-              <div className="h-2 w-2 rounded-full bg-gradient-to-r from-pink-500 to-rose-500"></div>
-              <h3 className="text-lg font-semibold text-pink-900 dark:text-pink-200">Skills</h3>
+              <div className="h-1.5 w-1.5 rounded-full bg-slate-400 dark:bg-slate-500"></div>
+              <h3 className="text-md font-bold text-slate-800 dark:text-slate-100">Skills</h3>
             </div>
             <button
               onClick={() =>
@@ -525,7 +711,7 @@ const ResumeEditor = () => {
                   skills: [],
                 })
               }
-              className="flex items-center gap-2 bg-gradient-to-r from-pink-600 to-rose-600 hover:from-pink-700 hover:to-rose-700 text-white px-3 py-2 rounded-lg text-sm font-semibold transition-all"
+              className="flex items-center gap-2 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:border-slate-900 dark:hover:border-slate-100 hover:bg-slate-50 dark:hover:bg-slate-805 px-3 py-2 rounded-lg text-sm font-semibold transition-all"
             >
               <Plus className="w-4 h-4" />
               Add Skill Category
@@ -569,11 +755,11 @@ const ResumeEditor = () => {
         </div>
 
         {/* Certifications Section */}
-        <div className="bg-gradient-to-br from-white to-amber-50 dark:from-slate-900 dark:to-amber-950/30 rounded-xl border border-amber-200 dark:border-amber-800 p-5 sm:p-6 shadow-sm">
+        <div className="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 p-5 sm:p-6 shadow-sm">
           <div className="flex justify-between items-center mb-4">
             <div className="flex items-center gap-2">
-              <div className="h-2 w-2 rounded-full bg-gradient-to-r from-amber-500 to-orange-500"></div>
-              <h3 className="text-lg font-semibold text-amber-900 dark:text-amber-200">Certifications</h3>
+              <div className="h-1.5 w-1.5 rounded-full bg-slate-400 dark:bg-slate-500"></div>
+              <h3 className="text-md font-bold text-slate-800 dark:text-slate-100">Certifications</h3>
             </div>
             <button
               onClick={() =>
@@ -584,7 +770,7 @@ const ResumeEditor = () => {
                   link: '',
                 })
               }
-              className="flex items-center gap-2 bg-gradient-to-r from-amber-600 to-orange-600 hover:from-amber-700 hover:to-orange-700 text-white px-3 py-2 rounded-lg text-sm font-semibold transition-all"
+              className="flex items-center gap-2 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:border-slate-900 dark:hover:border-slate-100 hover:bg-slate-50 dark:hover:bg-slate-805 px-3 py-2 rounded-lg text-sm font-semibold transition-all"
             >
               <Plus className="w-4 h-4" />
               Add Certification
@@ -639,11 +825,11 @@ const ResumeEditor = () => {
         </div>
 
         {/* Achievements Section */}
-        <div className="bg-gradient-to-br from-white to-purple-50 dark:from-slate-900 dark:to-purple-950/30 rounded-xl border border-purple-200 dark:border-purple-800 p-5 sm:p-6 shadow-sm">
+        <div className="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 p-5 sm:p-6 shadow-sm">
           <div className="flex justify-between items-center mb-4">
             <div className="flex items-center gap-2">
-              <div className="h-2 w-2 rounded-full bg-gradient-to-r from-purple-500 to-pink-500"></div>
-              <h3 className="text-lg font-semibold text-purple-900 dark:text-purple-200">Achievements</h3>
+              <div className="h-1.5 w-1.5 rounded-full bg-slate-400 dark:bg-slate-500"></div>
+              <h3 className="text-md font-bold text-slate-800 dark:text-slate-100">Achievements</h3>
             </div>
             <button
               onClick={() =>
@@ -653,7 +839,7 @@ const ResumeEditor = () => {
                   date: '',
                 })
               }
-              className="flex items-center gap-2 bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white px-3 py-2 rounded-lg text-sm font-semibold transition-all"
+              className="flex items-center gap-2 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:border-slate-900 dark:hover:border-slate-100 hover:bg-slate-50 dark:hover:bg-slate-805 px-3 py-2 rounded-lg text-sm font-semibold transition-all"
             >
               <Plus className="w-4 h-4" />
               Add Achievement
@@ -701,11 +887,12 @@ const ResumeEditor = () => {
         </div>
 
         {/* Links Section */}
-        <div className="bg-gradient-to-br from-white to-teal-50 dark:from-slate-900 dark:to-teal-950/30 rounded-xl border border-teal-200 dark:border-teal-800 p-5 sm:p-6 shadow-sm">
+        {/* Links Section */}
+        <div className="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 p-5 sm:p-6 shadow-sm">
           <div className="flex justify-between items-center mb-4">
             <div className="flex items-center gap-2">
-              <div className="h-2 w-2 rounded-full bg-gradient-to-r from-teal-500 to-cyan-500"></div>
-              <h3 className="text-lg font-semibold text-teal-900 dark:text-teal-200">Links</h3>
+              <div className="h-1.5 w-1.5 rounded-full bg-slate-400 dark:bg-slate-500"></div>
+              <h3 className="text-md font-bold text-slate-800 dark:text-slate-100">Links</h3>
             </div>
             <button
               onClick={() =>
@@ -715,7 +902,7 @@ const ResumeEditor = () => {
                   label: '',
                 })
               }
-              className="flex items-center gap-2 bg-gradient-to-r from-teal-600 to-cyan-600 hover:from-teal-700 hover:to-cyan-700 text-white px-3 py-2 rounded-lg text-sm font-semibold transition-all"
+              className="flex items-center gap-2 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:border-slate-900 dark:hover:border-slate-100 hover:bg-slate-50 dark:hover:bg-slate-805 px-3 py-2 rounded-lg text-sm font-semibold transition-all"
             >
               <Plus className="w-4 h-4" />
               Add Link
@@ -771,11 +958,12 @@ const ResumeEditor = () => {
         </div>
 
         {/* Custom Sections */}
-        <div className="bg-gradient-to-br from-white to-lime-50 dark:from-slate-900 dark:to-lime-950/30 rounded-xl border border-lime-200 dark:border-lime-800 p-5 sm:p-6 shadow-sm">
+        {/* Custom Sections */}
+        <div className="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 p-5 sm:p-6 shadow-sm">
           <div className="flex justify-between items-center mb-4">
             <div className="flex items-center gap-2">
-              <div className="h-2 w-2 rounded-full bg-gradient-to-r from-lime-500 to-green-500"></div>
-              <h3 className="text-lg font-semibold text-lime-900 dark:text-lime-200">Custom Sections</h3>
+              <div className="h-1.5 w-1.5 rounded-full bg-slate-400 dark:bg-slate-500"></div>
+              <h3 className="text-md font-bold text-slate-800 dark:text-slate-100">Custom Sections</h3>
             </div>
             <button
               onClick={() =>
@@ -784,7 +972,7 @@ const ResumeEditor = () => {
                   content: '',
                 })
               }
-              className="flex items-center gap-2 bg-gradient-to-r from-lime-600 to-green-600 hover:from-lime-700 hover:to-green-700 text-white px-3 py-2 rounded-lg text-sm font-semibold transition-all"
+              className="flex items-center gap-2 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:border-slate-900 dark:hover:border-slate-100 hover:bg-slate-50 dark:hover:bg-slate-805 px-3 py-2 rounded-lg text-sm font-semibold transition-all"
             >
               <Plus className="w-4 h-4" />
               Add Custom Section
@@ -826,11 +1014,11 @@ const ResumeEditor = () => {
         </div>
 
         {/* Template Selector */}
-        <div className="bg-gradient-to-br from-white to-violet-50 dark:from-slate-900 dark:to-violet-950/30 rounded-xl border border-violet-200 dark:border-violet-800 p-5 sm:p-6 shadow-sm">
+        <div className="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 p-5 sm:p-6 shadow-sm">
           <div className="flex items-center gap-2 mb-4">
-            <div className="h-2 w-2 rounded-full bg-gradient-to-r from-violet-500 to-purple-500"></div>
-            <h3 className="text-lg font-semibold text-violet-900 dark:text-violet-200 flex items-center gap-2">
-              <LayoutTemplate className="w-5 h-5" />
+            <div className="h-1.5 w-1.5 rounded-full bg-slate-400 dark:bg-slate-500"></div>
+            <h3 className="text-md font-bold text-slate-800 dark:text-slate-100 flex items-center gap-2">
+              <LayoutTemplate className="w-4 h-4 text-slate-500" />
               Select Template
             </h3>
           </div>
@@ -839,10 +1027,10 @@ const ResumeEditor = () => {
               <button
                 key={template}
                 onClick={() => setSelectedTemplate(template)}
-                className={`p-3 border-2 rounded-lg capitalize text-sm font-semibold transition-all ${
+                className={`p-3 border rounded-lg capitalize text-xs font-bold transition-all ${
                   selectedTemplate === template
-                    ? 'border-violet-500 bg-gradient-to-br from-violet-50 to-purple-50 dark:from-violet-900/40 dark:to-purple-900/40 text-violet-600 dark:text-violet-300 shadow-md'
-                    : 'border-slate-300 dark:border-slate-700 text-slate-600 dark:text-slate-400 hover:border-violet-400 dark:hover:border-violet-600 hover:bg-slate-50 dark:hover:bg-slate-800/30'
+                    ? 'border-slate-900 bg-slate-900 text-white dark:border-slate-100 dark:bg-slate-100 dark:text-slate-900 shadow-sm'
+                    : 'border-slate-200 dark:border-slate-800 text-slate-650 dark:text-slate-400 hover:border-slate-900 dark:hover:border-slate-100 hover:bg-slate-50 dark:hover:bg-slate-850'
                 }`}
               >
                 {template.replace(/([A-Z])/g, ' $1').trim()}

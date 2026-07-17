@@ -1,16 +1,22 @@
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useResumeStore } from '../../store/resumeStore';
 import { useAuthStore } from '../../store/authStore';
 import { useUIStore } from '../../store/uiStore';
 import ResumeEditor from './ResumeEditor';
 import ResumePreview from './ResumePreview';
-import { Search, Moon, Sun, Plus, Copy, Trash2, LogOut, FileText, Eye } from 'lucide-react';
+import SettingsModal from './SettingsModal';
+import AIImportModal from './AIImportModal';
+import { Search, Moon, Sun, Plus, Copy, Trash2, LogOut, Eye, Settings, Sparkles } from 'lucide-react';
+import logoImg from '../../assets/logo.png';
 
 const Dashboard = () => {
   const { resumes, currentResume, createResume, setCurrentResume, duplicateResume, deleteResume, syncCurrentResume } =
     useResumeStore();
   const { user, logout } = useAuthStore();
   const { darkMode, toggleDarkMode } = useUIStore();
+
+  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+  const [isImportOpen, setIsImportOpen] = useState(false);
 
   useEffect(() => {
     // If no resumes exist, create a default one
@@ -35,7 +41,7 @@ const Dashboard = () => {
     return (
       <div className="h-screen flex items-center justify-center bg-background-light dark:bg-background-dark">
         <div className="text-center">
-          <p className="text-slate-600 dark:text-slate-400 mb-4">Loading your resume...</p>
+          <p className="text-slate-600 dark:text-slate-400 mb-4 font-bold">Loading your resume...</p>
           <div className="w-12 h-12 border-4 border-slate-300 dark:border-slate-700 border-t-primary rounded-full animate-spin mx-auto"></div>
         </div>
       </div>
@@ -43,23 +49,23 @@ const Dashboard = () => {
   }
 
   return (
-    <div className="h-screen flex flex-col bg-gradient-to-br from-slate-50 via-blue-50 to-purple-50 dark:from-slate-950 dark:via-blue-950 dark:to-purple-950 text-slate-900 dark:text-slate-100 overflow-hidden">
-      <header className="border-b border-slate-200 dark:border-slate-800 bg-gradient-to-r from-white/90 to-blue-50/90 dark:from-slate-900/90 dark:to-blue-900/90 backdrop-blur sticky top-0 z-20">
+    <div className="h-screen flex flex-col bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 overflow-hidden">
+      <header className="border-b border-slate-200 dark:border-slate-800 bg-white/80 dark:bg-slate-900/80 backdrop-blur sticky top-0 z-20">
         <div className="px-4 sm:px-6 py-3 flex flex-wrap xl:flex-nowrap items-center justify-between gap-3">
           <div className="flex items-center gap-3 min-w-0">
-            <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-blue-500 to-purple-600 text-white flex items-center justify-center shadow-md">
-              <FileText className="w-5 h-5" />
+            <div className="h-10 w-10 rounded-xl bg-slate-900 dark:bg-slate-100 flex items-center justify-center overflow-hidden shadow-sm">
+              <img src={logoImg} alt="Logo" className="w-8 h-8 object-contain dark:invert" />
             </div>
             <div className="min-w-0">
-              <h1 className="font-black tracking-tight text-lg bg-gradient-to-r from-blue-600 to-purple-600 dark:from-blue-400 dark:to-purple-400 bg-clip-text text-transparent">Resume Studio</h1>
-              <p className="text-xs text-slate-500 dark:text-slate-400 truncate">Practical builder with live preview</p>
+              <h1 className="font-extrabold tracking-tight text-md text-slate-850 dark:text-slate-50">Resume Studio</h1>
+              <p className="text-[11px] font-bold text-slate-500 dark:text-slate-450 truncate">Practical builder with live preview</p>
             </div>
           </div>
 
           <div className="relative w-full sm:w-72 lg:w-96 order-3 xl:order-none">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 w-4 h-4" />
             <input
-              className="w-full bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl py-2.5 pl-9 pr-4 text-sm focus:ring-2 focus:ring-blue-500/30 focus:border-blue-500 outline-none"
+              className="w-full bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl py-2.5 pl-9 pr-4 text-sm focus:ring-2 focus:ring-slate-500/30 focus:border-slate-500 outline-none"
               placeholder="Search resumes..."
               type="text"
             />
@@ -67,15 +73,22 @@ const Dashboard = () => {
 
           <div className="flex items-center gap-2 sm:gap-3">
             <button
+              onClick={() => setIsSettingsOpen(true)}
+              className="h-10 w-10 rounded-xl border border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800 hover:border-slate-350 dark:hover:border-slate-655 flex items-center justify-center transition-all"
+              title="AI Settings"
+            >
+              <Settings className="w-5 h-5 text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-100" />
+            </button>
+            <button
               onClick={() => toggleDarkMode()}
-              className="h-10 w-10 rounded-xl border border-slate-200 dark:border-slate-700 hover:bg-blue-100 dark:hover:bg-blue-900/30 hover:border-blue-300 dark:hover:border-blue-700 flex items-center justify-center transition-all"
+              className="h-10 w-10 rounded-xl border border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800 hover:border-slate-350 dark:hover:border-slate-655 flex items-center justify-center transition-all"
               title="Toggle theme"
             >
-              {darkMode ? <Sun className="w-5 h-5 text-orange-500" /> : <Moon className="w-5 h-5 text-blue-600" />}
+              {darkMode ? <Sun className="w-5 h-5 text-slate-500 dark:text-slate-450" /> : <Moon className="w-5 h-5 text-slate-600 dark:text-slate-400" />}
             </button>
             <button
               onClick={logout}
-              className="h-10 px-3 rounded-xl border border-red-200 dark:border-red-900/40 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 hover:border-red-400 dark:hover:border-red-700 flex items-center gap-2 text-sm font-semibold transition-all"
+              className="h-10 px-3 rounded-xl border border-red-200 dark:border-red-900/40 text-red-655 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-950/20 hover:border-red-400 dark:hover:border-red-700 flex items-center gap-2 text-sm font-semibold transition-all"
               title="Logout"
             >
               <LogOut className="w-4 h-4" />
@@ -99,16 +112,24 @@ const Dashboard = () => {
 
           <button
             onClick={handleCreateResume}
-            className="h-10 px-3 rounded-xl bg-gradient-to-r from-blue-600 to-cyan-600 hover:from-blue-700 hover:to-cyan-700 text-white transition-all transform hover:scale-105 text-sm font-semibold flex items-center gap-2 shadow-md"
+            className="h-10 px-3 rounded-xl bg-slate-900 hover:bg-slate-850 dark:bg-slate-100 dark:hover:bg-slate-200 text-white dark:text-slate-900 transition-all text-sm font-semibold flex items-center gap-2 shadow-sm"
           >
             <Plus className="w-4 h-4" />
             New
           </button>
           <button
-            onClick={() => duplicateResume(currentResume.id)}
-            className="h-10 px-3 rounded-xl border border-emerald-200 dark:border-emerald-800 bg-emerald-50 dark:bg-emerald-900/20 text-emerald-700 dark:text-emerald-300 hover:bg-emerald-100 dark:hover:bg-emerald-900/40 hover:border-emerald-400 dark:hover:border-emerald-600 transition-all text-sm font-semibold flex items-center gap-2"
+            onClick={() => setIsImportOpen(true)}
+            className="h-10 px-3 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-850 text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800 transition-all text-sm font-semibold flex items-center gap-2"
+            title="Import Resume / LinkedIn Profile using Gemini AI"
           >
-            <Copy className="w-4 h-4" />
+            <Sparkles className="w-4 h-4 text-slate-550" />
+            Import (AI)
+          </button>
+          <button
+            onClick={() => duplicateResume(currentResume.id)}
+            className="h-10 px-3 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-850 text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800 transition-all text-sm font-semibold flex items-center gap-2"
+          >
+            <Copy className="w-4 h-4 text-slate-550" />
             Duplicate
           </button>
           <button
@@ -117,7 +138,7 @@ const Dashboard = () => {
                 deleteResume(currentResume.id);
               }
             }}
-            className="h-10 px-3 rounded-xl border border-red-200 dark:border-red-900/40 bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 hover:bg-red-100 dark:hover:bg-red-900/40 hover:border-red-400 dark:hover:border-red-700 transition-all text-sm font-semibold flex items-center gap-2"
+            className="h-10 px-3 rounded-xl border border-red-200 dark:border-red-900/30 bg-white dark:bg-slate-850 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-950/20 transition-all text-sm font-semibold flex items-center gap-2"
           >
             <Trash2 className="w-4 h-4" />
             Delete
@@ -140,6 +161,13 @@ const Dashboard = () => {
           </section>
         </div>
       </main>
+
+      <SettingsModal isOpen={isSettingsOpen} onClose={() => setIsSettingsOpen(false)} />
+      <AIImportModal 
+        isOpen={isImportOpen} 
+        onClose={() => setIsImportOpen(false)} 
+        onOpenSettings={() => setIsSettingsOpen(true)} 
+      />
     </div>
   );
 };
